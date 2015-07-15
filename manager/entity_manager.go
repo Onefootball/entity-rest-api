@@ -90,34 +90,37 @@ func (em *EntityDbManager) GetEntity(entity string, id string) (map[string]inter
 	return result, nil
 }
 
-func (em *EntityDbManager) PostEntity(entity string, postData map[string]string) (int64, error) {
+func (em *EntityDbManager) PostEntity(entity string, postData map[string]interface{}) (int64, error) {
 
 	columnsQuery := fmt.Sprintf(
 		"SHOW COLUMNS FROM `%s`",
 		entity,
 	)
 
-	columnsResult, err := em.retrieveAllResultsByQuery(columnsQuery)
-
-	if err != nil {
-		return 0, err
-	}
-
 	newEntity := make(map[string]string)
 
-	for _, columnsRow := range columnsResult {
-		column := columnsRow["Field"].(string)
+	columnsResult, err := em.retrieveAllResultsByQuery(columnsQuery)
 
-		if column == "id" {
-			continue
+	// if there is an error in SHOW COLUMNS (like for sqlite databases) all NOT NULL table fields must be in post data
+	if err != nil {
+		for postDataKey, postDataVal := range postData {
+			newEntity[postDataKey] = em.convertJsonValue(postDataVal)
 		}
+	} else {
+		for _, columnsRow := range columnsResult {
+			column := columnsRow["Field"].(string)
 
-		_, ok := postData[column]
+			if column == "id" {
+				continue
+			}
 
-		if ok {
-			newEntity[column] = postData[column]
-		} else {
-			newEntity[column] = ""
+			_, ok := postData[column]
+
+			if ok {
+				newEntity[column] = em.convertJsonValue(postData[column])
+			} else {
+				newEntity[column] = ""
+			}
 		}
 	}
 
@@ -160,12 +163,11 @@ func (em *EntityDbManager) PostEntity(entity string, postData map[string]string)
 	return newId, nil
 }
 
-func (api *EntityDbManager) UpdateEntity(entity string, id string, updateData map[string]string) (int64, map[string]interface{}, error) {
+func (em *EntityDbManager) UpdateEntity(entity string, id string, updateData map[string]string) (int64, map[string]interface{}, error) {
 
-	entityToUpdate, err := api.retrieveSingleResultById(entity, id)
+	entityToUpdate, err := em.retrieveSingleResultById(entity, id)
 
 	if err != nil {
-		//rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return 0, make(map[string]interface{}), err
 	}
 
@@ -197,7 +199,7 @@ func (api *EntityDbManager) UpdateEntity(entity string, id string, updateData ma
 		id,
 	)
 
-	res, err := api.Db.Exec(updQuery)
+	res, err := em.Db.Exec(updQuery)
 
 	if err != nil {
 		return 0, make(map[string]interface{}), err
@@ -212,7 +214,7 @@ func (api *EntityDbManager) UpdateEntity(entity string, id string, updateData ma
 	return rowsAffected, entityToUpdate, nil
 }
 
-func (api *EntityDbManager) DeleteEntity(entity string, id string) (int64, error) {
+func (em *EntityDbManager) DeleteEntity(entity string, id string) (int64, error) {
 
 	query := fmt.Sprintf(
 		"DELETE FROM `%s` WHERE id = %s",
@@ -220,7 +222,7 @@ func (api *EntityDbManager) DeleteEntity(entity string, id string) (int64, error
 		id,
 	)
 
-	res, err := api.Db.Exec(query)
+	res, err := em.Db.Exec(query)
 
 	if err != nil {
 		return 0, err
@@ -235,18 +237,21 @@ func (api *EntityDbManager) DeleteEntity(entity string, id string) (int64, error
 	return rowsAffected, nil
 }
 
-func (api *EntityDbManager) retrieveAllResultsByQuery(query string) ([]map[string]interface{}, error) {
+func (em *EntityDbManager) retrieveAllResultsByQuery(query string) ([]map[string]interface{}, error) {
 
 	allResults := make([]map[string]interface{}, 0)
 
-	rows, err := api.Db.Query(query)
-	defer rows.Close()
-
-	fmt.Printf("%#v\n", query)
+	rows, err := em.Db.Query(query)
 
 	if err != nil {
 		return allResults, err
 	}
+
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			err = cerr
+		}
+	}()
 
 	cols, err := rows.Columns()
 
@@ -272,7 +277,7 @@ func (api *EntityDbManager) retrieveAllResultsByQuery(query string) ([]map[strin
 		}
 
 		for i, raw := range rawResult {
-			result[cols[i]] = api.convertDbValue(raw)
+			result[cols[i]] = em.convertDbValue(raw)
 		}
 
 		allResults = append(allResults, result)
@@ -281,7 +286,7 @@ func (api *EntityDbManager) retrieveAllResultsByQuery(query string) ([]map[strin
 	return allResults, nil
 }
 
-func (api *EntityDbManager) retrieveSingleResultById(entity string, id string) (map[string]interface{}, error) {
+func (em *EntityDbManager) retrieveSingleResultById(entity string, id string) (map[string]interface{}, error) {
 
 	result := make(map[string]interface{})
 
@@ -291,12 +296,17 @@ func (api *EntityDbManager) retrieveSingleResultById(entity string, id string) (
 		id,
 	)
 
-	rows, err := api.Db.Query(query)
-	defer rows.Close()
+	rows, err := em.Db.Query(query)
 
 	if err != nil {
 		return result, err
 	}
+
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			err = cerr
+		}
+	}()
 
 	cols, err := rows.Columns()
 
@@ -324,7 +334,7 @@ func (api *EntityDbManager) retrieveSingleResultById(entity string, id string) (
 		}
 
 		for i, raw := range rawResult {
-			result[cols[i]] = api.convertDbValue(raw)
+			result[cols[i]] = em.convertDbValue(raw)
 		}
 
 		if resultCount > 1 {
@@ -339,11 +349,11 @@ func (api *EntityDbManager) retrieveSingleResultById(entity string, id string) (
 	return result, nil
 }
 
-func (api *EntityDbManager) convertDbValue(dbValue interface{}) interface{} {
+func (em *EntityDbManager) convertDbValue(dbValue interface{}) interface{} {
 
 	switch t := dbValue.(type) {
 		default:
-		fmt.Printf("[EntityDbManager] Unexpected type %T: %#v\n", t, dbValue)
+		fmt.Printf("[EntityDbManager] Unexpected db type %T: %#v\n", t, dbValue)
 		return ""
 		case bool:
 		return dbValue.(bool)
@@ -360,5 +370,33 @@ func (api *EntityDbManager) convertDbValue(dbValue interface{}) interface{} {
 		case nil:
 		return nil
 	}
+}
+
+func (em *EntityDbManager) convertJsonValue(jsonValue interface{}) string {
+
+	switch t := jsonValue.(type) {
+		default:
+		fmt.Printf("[EntityDbManager] Unexpected json type %T: %#v\n", t, jsonValue)
+		return ""
+		case bool:
+		return strconv.Itoa(em.Btoi(jsonValue.(bool)))
+		case int:
+		return strconv.Itoa(jsonValue.(int))
+		case int64:
+		return strconv.FormatInt(jsonValue.(int64), 10)
+		case float64:
+		return strconv.Itoa(int(jsonValue.(float64)))
+		case string:
+		return jsonValue.(string)
+		case nil:
+		return "NULL"
+	}
+}
+
+func (em *EntityDbManager) Btoi(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
 

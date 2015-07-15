@@ -86,7 +86,7 @@ func (api *EntityRestAPI) PostEntity(w rest.ResponseWriter, r *rest.Request) {
 
 	entity := r.PathParam("entity")
 
-	postData := map[string]string{}
+	postData := map[string]interface{}{}
 
 	if err := r.DecodeJsonPayload(&postData); err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
