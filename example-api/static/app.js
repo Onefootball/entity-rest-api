@@ -42,7 +42,7 @@
         }
 
         var admin = nga.application('Entity REST API demo using ng-admin') // application main title
-            .baseApiUrl('http://localhost:8080/api/'); // main API endpoint
+            .baseApiUrl(location.protocol + '//' + location.hostname + (location.port ? ':' + location.port : '') + '/api/');
 
         // define all entities at the top to allow references between them
         var post = nga.entity('Post');
