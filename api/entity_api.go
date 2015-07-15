@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"fmt"
 	"strconv"
-	eram "github.com/onefootball/entity-rest-api/manager"
+	eram "github.com/Onefootball/entity-rest-api/manager"
 )
 
 type EntityRestAPI struct {

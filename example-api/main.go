@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/ant0ine/go-json-rest/rest"
-	eram "github.com/onefootball/entity-rest-api/manager"
-	era "github.com/onefootball/entity-rest-api/api"
+	eram "github.com/Onefootball/entity-rest-api/manager"
+	era "github.com/Onefootball/entity-rest-api/api"
 	"log"
 	"net/http"
 	"database/sql"
