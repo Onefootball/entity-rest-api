@@ -239,6 +239,26 @@ func TestPUTShouldReturn200IfEntityUpdated(t *testing.T) {
 
 func TestDELETEShouldReturn200IfEntityExists(t *testing.T) {
 
+	entity := map[string]string{}
+
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("DELETE", fmt.Sprintf("%s/api/post/%d", server.URL, 10), entity))
+
+	recorded.CodeIs(200)
+}
+
+func TestDELETEShouldReturn404IfEntityNotExists(t *testing.T) {
+
+	entity := map[string]string{}
+
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("DELETE", fmt.Sprintf("%s/api/post/%d", server.URL, 10), entity))
+
+	recorded.CodeIs(404)
 }
 
 func TestGETWithSortQueryStringsShouldReturn200(t *testing.T) {
