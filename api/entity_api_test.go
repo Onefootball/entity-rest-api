@@ -93,7 +93,6 @@ func TestGETWithExistentSetShouldReturnJsonArray200(t *testing.T) {
 func TestGETEntityDoestExistsShouldReturn404(t *testing.T) {
 	recorded := erat.RunRequest(t, handler, erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/user/999", server.URL), nil))
 	recorded.CodeIs(404)
-	recorded.BodyIs("")
 }
 
 func TestGETEntityThatExistsReturn200WithJson(t *testing.T) {

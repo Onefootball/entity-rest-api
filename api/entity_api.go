@@ -1,11 +1,11 @@
 package api
 
 import (
+	"fmt"
+	eram "github.com/Onefootball/entity-rest-api/manager"
 	"github.com/ant0ine/go-json-rest/rest"
 	"net/http"
-	"fmt"
 	"strconv"
-	eram "github.com/Onefootball/entity-rest-api/manager"
 )
 
 type EntityRestAPI struct {
@@ -76,6 +76,9 @@ func (api *EntityRestAPI) GetEntity(w rest.ResponseWriter, r *rest.Request) {
 
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	} else if len(result) <= 0 {
+		rest.Error(w, "Not Found", http.StatusNotFound)
 		return
 	}
 

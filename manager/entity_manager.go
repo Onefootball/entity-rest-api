@@ -1,12 +1,11 @@
 package manager
 
 import (
+	"database/sql"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
-	"errors"
-	"strconv"
-	"database/sql"
 )
 
 type EntityDbManager struct {
@@ -23,7 +22,7 @@ func (em *EntityDbManager) GetEntities(entity string, filterParams map[string]st
 
 	var whereClause string
 
-	if (len(filterParams) > 0) {
+	if len(filterParams) > 0 {
 		whereClause = " WHERE "
 		paramCount := 0
 
@@ -342,32 +341,28 @@ func (em *EntityDbManager) retrieveSingleResultById(entity string, id string) (m
 		}
 	}
 
-	if resultCount != 1 {
-		return result, errors.New("Id query returned inappropriate result")
-	}
-
 	return result, nil
 }
 
 func (em *EntityDbManager) convertDbValue(dbValue interface{}) interface{} {
 
 	switch t := dbValue.(type) {
-		default:
+	default:
 		fmt.Printf("[EntityDbManager] Unexpected db type %T: %#v\n", t, dbValue)
 		return ""
-		case bool:
+	case bool:
 		return dbValue.(bool)
-		case int:
+	case int:
 		return dbValue.(int)
-		case int64:
+	case int64:
 		return dbValue.(int64)
-		case []byte:
+	case []byte:
 		return string(dbValue.([]byte))
-		case string:
+	case string:
 		return dbValue.(string)
-		case time.Time:
+	case time.Time:
 		return dbValue.(time.Time).String()
-		case nil:
+	case nil:
 		return nil
 	}
 }
@@ -375,20 +370,20 @@ func (em *EntityDbManager) convertDbValue(dbValue interface{}) interface{} {
 func (em *EntityDbManager) convertJsonValue(jsonValue interface{}) string {
 
 	switch t := jsonValue.(type) {
-		default:
+	default:
 		fmt.Printf("[EntityDbManager] Unexpected json type %T: %#v\n", t, jsonValue)
 		return ""
-		case bool:
+	case bool:
 		return strconv.Itoa(em.Btoi(jsonValue.(bool)))
-		case int:
+	case int:
 		return strconv.Itoa(jsonValue.(int))
-		case int64:
+	case int64:
 		return strconv.FormatInt(jsonValue.(int64), 10)
-		case float64:
+	case float64:
 		return strconv.Itoa(int(jsonValue.(float64)))
-		case string:
+	case string:
 		return jsonValue.(string)
-		case nil:
+	case nil:
 		return "NULL"
 	}
 }
@@ -399,4 +394,3 @@ func (em *EntityDbManager) Btoi(b bool) int {
 	}
 	return 0
 }
-
