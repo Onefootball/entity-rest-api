@@ -96,7 +96,20 @@ func TestGETEntityDoestExistsShouldReturn404(t *testing.T) {
 }
 
 func TestGETEntityThatExistsReturn200WithJson(t *testing.T) {
+	recorded := erat.RunRequest(t, handler, erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/user/1", server.URL), nil))
+	recorded.CodeIs(200)
 
+	data := User{}
+	err := recorded.DecodeJsonPayload(&data)
+
+	if err != nil {
+		t.Error(err)
+	} else {
+
+		if data.Id != 1 {
+			t.Error("Weird behavior finding different user Id.")
+		}
+	}
 }
 
 func TestPOSTWithInvalidEntityShouldReturn400(t *testing.T) {
