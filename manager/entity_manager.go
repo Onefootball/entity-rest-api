@@ -107,6 +107,7 @@ func (em *EntityDbManager) PostEntity(entity string, postData map[string]interfa
 		}
 	} else {
 		for _, columnsRow := range columnsResult {
+
 			column := columnsRow["Field"].(string)
 
 			if column == "id" {
