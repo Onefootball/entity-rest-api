@@ -213,7 +213,7 @@ func TestPUTWithNoEntityChangeShouldReturn204(t *testing.T) {
 	recorded.CodeIs(204)
 }
 
-func TestDELETEShouldReturn404IfEntityNotFound(t *testing.T) {
+func TestPUTShouldReturn404IfEntityNotFound(t *testing.T) {
 
 	entity := map[string]string{"title": "Test Post 1.1"}
 
@@ -223,6 +223,18 @@ func TestDELETEShouldReturn404IfEntityNotFound(t *testing.T) {
 		erat.MakeSimpleRequest("PUT", fmt.Sprintf("%s/api/post/%d", server.URL, 999), entity))
 
 	recorded.CodeIs(404)
+}
+
+func TestPUTShouldReturn200IfEntityUpdated(t *testing.T) {
+
+	entity := map[string]string{"title": "Test Post 1.1"}
+
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("PUT", fmt.Sprintf("%s/api/post/%d", server.URL, 10), entity))
+
+	recorded.CodeIs(200)
 }
 
 func TestDELETEShouldReturn200IfEntityExists(t *testing.T) {
