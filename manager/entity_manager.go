@@ -96,15 +96,19 @@ func (em *EntityDbManager) PostEntity(entity string, postData map[string]interfa
 		entity,
 	)
 
-	newEntity := make(map[string]string)
+	var columns []string
+	var values []string
 
 	columnsResult, err := em.retrieveAllResultsByQuery(columnsQuery)
 
-	// if there is an error in SHOW COLUMNS (like for sqlite databases) all NOT NULL table fields must be in post data
+	// if there is an error in SHOW COLUMNS all fields are required
 	if err != nil {
+
 		for postDataKey, postDataVal := range postData {
-			newEntity[postDataKey] = em.convertJsonValue(postDataVal)
+			columns = append(columns, fmt.Sprintf("`%s`", postDataKey))
+			values = append(values, fmt.Sprintf("'%s'", em.convertJsonValue(postDataVal)))
 		}
+
 	} else {
 		for _, columnsRow := range columnsResult {
 
@@ -117,35 +121,17 @@ func (em *EntityDbManager) PostEntity(entity string, postData map[string]interfa
 			_, ok := postData[column]
 
 			if ok {
-				newEntity[column] = em.convertJsonValue(postData[column])
-			} else {
-				newEntity[column] = ""
+				columns = append(columns, fmt.Sprintf("`%s`", column))
+				values = append(values, fmt.Sprintf("'%s'", em.convertJsonValue(postData[column])))
 			}
 		}
-	}
-
-	var insertColumnsString string
-	var insertValuesString string
-
-	propertyCount := 0
-
-	for entityKey, entityVal := range newEntity {
-
-		if propertyCount == 0 {
-			insertColumnsString = fmt.Sprintf("`%s`", entityKey)
-			insertValuesString = fmt.Sprintf("'%s'", entityVal)
-		} else {
-			insertColumnsString = fmt.Sprintf("%s, `%s`", insertColumnsString, entityKey)
-			insertValuesString = fmt.Sprintf("%s, '%s'", insertValuesString, entityVal)
-		}
-		propertyCount++
 	}
 
 	insertQuery := fmt.Sprintf(
 		"INSERT INTO `%s` (%s) VALUES(%s)",
 		entity,
-		insertColumnsString,
-		insertValuesString,
+		strings.Join(columns, ", "),
+		strings.Join(values, ", "),
 	)
 
 	res, err := em.Db.Exec(insertQuery)
