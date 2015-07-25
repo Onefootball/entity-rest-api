@@ -130,10 +130,13 @@ func (api *EntityRestAPI) PutEntity(w rest.ResponseWriter, r *rest.Request) {
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	} else if len(updatedEntity) <= 0 {
+		rest.Error(w, "Not Found", http.StatusNotFound)
+		return
 	}
 
 	if rowsAffected == 0 {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusNotModified)
 	} else {
 		w.WriteHeader(http.StatusOK)
 	}

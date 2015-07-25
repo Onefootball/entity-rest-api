@@ -168,6 +168,8 @@ func (em *EntityDbManager) UpdateEntity(entity string, id string, updateData map
 
 	if err != nil {
 		return 0, make(map[string]interface{}), err
+	} else if len(entityToUpdate) <= 0 {
+		return 0, entityToUpdate, nil
 	}
 
 	for updKey, _ := range entityToUpdate {
