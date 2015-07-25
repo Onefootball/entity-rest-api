@@ -36,6 +36,11 @@ type Post struct {
 	Status      int    `json:"status"`
 }
 
+type Tag struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+}
+
 func init() {
 
 	db, err := sql.Open("sqlite3", ":memory:")
@@ -256,13 +261,35 @@ func TestDELETEShouldReturn404IfEntityNotExists(t *testing.T) {
 	recorded := erat.RunRequest(
 		t,
 		handler,
-		erat.MakeSimpleRequest("DELETE", fmt.Sprintf("%s/api/post/%d", server.URL, 10), entity))
+		erat.MakeSimpleRequest("DELETE", fmt.Sprintf("%s/api/post/%d", server.URL, 999), entity))
 
 	recorded.CodeIs(404)
 }
 
-func TestGETWithSortQueryStringsShouldReturn200(t *testing.T) {
+func TestGETWithSortQueryStringsShouldReturn200WithOrderedSet(t *testing.T) {
 
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/tag?_sortField=name&_sortDir=DESC", server.URL), nil))
+
+	recorded.CodeIs(200)
+
+	data := []Tag{}
+	err := recorded.DecodeJsonPayload(&data)
+
+	if err != nil {
+		t.Error(err)
+	} else {
+
+		if len(data) <= 0 {
+			t.Error("Should have found at least 3 tags.")
+		}
+
+		if data[len(data)-1].Name != "announce" {
+			t.Error("The data set is not ordered by name.")
+		}
+	}
 }
 
 func TestGETWithAllQueryStringsShouldReturn200(t *testing.T) {
