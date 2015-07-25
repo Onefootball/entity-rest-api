@@ -68,13 +68,23 @@ func init() {
 }
 
 func TestGETWithEmptySetShouldReturnEmptyJsonArray200(t *testing.T) {
-	recorded := erat.RunRequest(t, handler, erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/comment", server.URL), nil))
+
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/comment", server.URL), nil))
+
 	recorded.CodeIs(200)
 	recorded.BodyIs("[]")
 }
 
 func TestGETWithExistentSetShouldReturnJsonArray200(t *testing.T) {
-	recorded := erat.RunRequest(t, handler, erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/user", server.URL), nil))
+
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/user", server.URL), nil))
+
 	recorded.CodeIs(200)
 
 	data := []User{}
@@ -91,12 +101,22 @@ func TestGETWithExistentSetShouldReturnJsonArray200(t *testing.T) {
 }
 
 func TestGETEntityDoestExistsShouldReturn404(t *testing.T) {
-	recorded := erat.RunRequest(t, handler, erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/user/999", server.URL), nil))
+
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/user/999", server.URL), nil))
+
 	recorded.CodeIs(404)
 }
 
 func TestGETEntityThatExistsReturn200WithJson(t *testing.T) {
-	recorded := erat.RunRequest(t, handler, erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/user/1", server.URL), nil))
+
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/user/1", server.URL), nil))
+
 	recorded.CodeIs(200)
 
 	data := User{}
@@ -113,6 +133,24 @@ func TestGETEntityThatExistsReturn200WithJson(t *testing.T) {
 }
 
 func TestPOSTWithInvalidEntityShouldReturn400(t *testing.T) {
+
+	// This post doesn't have title and should be wrong then
+	entity := map[string]string{
+		"content":     "<p>Onefootball test post content...</p>",
+		"create_time": "1437839411",
+		"author_id":   "1",
+		"status":      "1"}
+
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("POST", fmt.Sprintf("%s/api/post", server.URL), entity))
+
+	recorded.CodeIs(400)
+	recorded.BodyIs("")
+}
+
+func TestPOSTWithExistingEntryShouldReturn409(t *testing.T) {
 
 }
 
