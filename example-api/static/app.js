@@ -29,7 +29,7 @@
                     delete params._filters;
                 }
             }
-            
+
             return { params: params };
         });
     });
@@ -212,7 +212,15 @@
                 nga.field('create_time', 'number')
                     .label('Time Posted')
                     .defaultValue(Math.round(+new Date()/1000)), // preset fields in creation view with defaultValue
+                nga.field('content', 'wysiwyg'), // overriding the type allows rich text editing for the body
+                nga.field('status', 'choice')
+                    .choices([
+                      { value: '1', label: 'Draft' },
+                      { value: '2', label: 'Published' },
+                      { value: '3', label: 'Archived' },
+                    ]),
                 nga.field('author'),
+                nga.field('email'),
                 nga.field('post_id', 'reference')
                     .label('Post')
                     .map(truncate)
