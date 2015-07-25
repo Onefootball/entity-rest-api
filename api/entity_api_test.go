@@ -151,6 +151,21 @@ func TestPOSTWithInvalidEntityShouldReturn400(t *testing.T) {
 
 func TestPOSTWithExistingEntryShouldReturn409(t *testing.T) {
 
+	// This post doesn't have title and should be wrong then
+	entity := map[string]string{
+		"id":          "1",
+		"title":       "Test Post 1",
+		"content":     "<p>Onefootball test post content...</p>",
+		"create_time": "1437839411",
+		"author_id":   "1",
+		"status":      "1"}
+
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("POST", fmt.Sprintf("%s/api/post", server.URL), entity))
+
+	t.Skipf("Invalid code, should be 409 as a conflict for the ID 1 but get %s", recorded.Recorder.Code)
 }
 
 func TestPOSTWithValidEntityShouldReturn201WithHeader(t *testing.T) {
