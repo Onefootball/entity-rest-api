@@ -71,6 +71,22 @@ Where the `entity` parameter is a reflection to the table name. Sample requests:
 
 It also allow the insertion of entities based on json.
 
+Queries
+-------
+
+Beside the default entity structure, you can do increment your request with queryStrings that allow to order, filter, partition, and more with the entity set.
+
+	_perPage // if you want to use pagination
+	_page // current page
+	_sortField // the field to sort the query
+	_sortDir // the direction of the sort
+
+All the remaining parameters passed by queryString will be treated as filters, for example:
+
+	name=test
+
+This will search by `test` in the column `name` of the entity table.
+
 License
 -------
 
