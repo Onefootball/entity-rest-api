@@ -19,6 +19,14 @@ var (
 	handler http.Handler
 )
 
+type User struct {
+	Id       int
+	Username string
+	Password string
+	Salt     string
+	Email    string
+}
+
 func init() {
 
 	db, err := sql.Open("sqlite3", ":memory:")
@@ -27,7 +35,7 @@ func init() {
 		log.Fatal("An error '%s' was not expected when opening a stub database connection", err)
 	} else {
 
-		dat, err := ioutil.ReadFile("./../example-api/blog.sql")
+		dat, err := ioutil.ReadFile("./../test.sql")
 		if err != nil {
 			log.Fatal("An error '%s' was not expected when opening sql file", err)
 		} else {
@@ -60,16 +68,32 @@ func init() {
 }
 
 func TestGETWithEmptySetShouldReturnEmptyJsonArray200(t *testing.T) {
-	recorded := erat.RunRequest(t, handler, erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/user", server.URL), nil))
+	recorded := erat.RunRequest(t, handler, erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/comment", server.URL), nil))
 	recorded.CodeIs(200)
+	recorded.BodyIs("[]")
 }
 
 func TestGETWithExistentSetShouldReturnJsonArray200(t *testing.T) {
+	recorded := erat.RunRequest(t, handler, erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/user", server.URL), nil))
+	recorded.CodeIs(200)
 
+	data := []User{}
+	err := recorded.DecodeJsonPayload(&data)
+
+	if err != nil {
+		t.Error(err)
+	} else {
+
+		if len(data) < 1 {
+			t.Error("No users found, and should have found at least one.")
+		}
+	}
 }
 
 func TestGETEntityDoestExistsShouldReturn404(t *testing.T) {
-
+	recorded := erat.RunRequest(t, handler, erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/user/999", server.URL), nil))
+	recorded.CodeIs(404)
+	recorded.BodyIs("")
 }
 
 func TestGETEntityThatExistsReturn200WithJson(t *testing.T) {
