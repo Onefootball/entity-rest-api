@@ -87,6 +87,17 @@ All the remaining parameters passed by queryString will be treated as filters, f
 
 This will search by `test` in the column `name` of the entity table.
 
+Tests
+-----
+
+To run the tests you must install the test dependency:
+
+	go get github.com/DATA-DOG/go-sqlmock
+
+And then a normal:
+
+	go test
+
 License
 -------
 
