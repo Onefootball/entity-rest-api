@@ -292,6 +292,24 @@ func TestGETWithSortQueryStringsShouldReturn200WithOrderedSet(t *testing.T) {
 	}
 }
 
-func TestGETWithAllQueryStringsShouldReturn200(t *testing.T) {
+func TestGETWithPaginationQueryStringsShouldReturn200WithLimit(t *testing.T) {
 
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/tag?_perPage=2&_page=1", server.URL), nil))
+
+	recorded.CodeIs(200)
+
+	data := []Tag{}
+	err := recorded.DecodeJsonPayload(&data)
+
+	if err != nil {
+		t.Error(err)
+	} else {
+
+		if len(data) != 2 {
+			t.Error("Should have found and limited the set to 2 tags.")
+		}
+	}
 }
