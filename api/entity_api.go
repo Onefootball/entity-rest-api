@@ -120,7 +120,7 @@ func (api *EntityRestAPI) PutEntity(w rest.ResponseWriter, r *rest.Request) {
 	id := r.PathParam("id")
 	entity := r.PathParam("entity")
 
-	updated := map[string]string{}
+	updated := map[string]interface{}{}
 
 	if err := r.DecodeJsonPayload(&updated); err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
@@ -138,7 +138,7 @@ func (api *EntityRestAPI) PutEntity(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	if rowsAffected == 0 {
-		w.WriteHeader(http.StatusNotModified)
+		w.WriteHeader(http.StatusNoContent)
 	} else {
 		w.WriteHeader(http.StatusOK)
 	}

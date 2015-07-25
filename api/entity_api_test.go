@@ -20,20 +20,20 @@ var (
 )
 
 type User struct {
-	Id       int
-	Username string
-	Password string
-	Salt     string
-	Email    string
+	Id       int    `json:"id"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Salt     string `json:"salt"`
+	Email    string `json:"email"`
 }
 
 type Post struct {
-	Id          int
-	Title       string
-	Content     string
-	Create_Time int
-	Author_Id   int
-	Status      int
+	Id          int    `json:"id"`
+	Title       string `json:"title"`
+	Content     string `json:"content"`
+	Create_Time int    `json:"create_time"`
+	Author_Id   int    `json:"author_id"`
+	Status      int    `json:"status"`
 }
 
 func init() {
@@ -144,18 +144,14 @@ func TestGETEntityThatExistsReturn200WithJson(t *testing.T) {
 func TestPOSTWithInvalidEntityShouldReturn400(t *testing.T) {
 
 	// This post doesn't have title and should be wrong then
-	entity := new(Post)
-	entity.Content = "<p>Onefootball test post content...</p>"
-	entity.Create_Time = 1437839411
-	entity.Author_Id = 1
-	entity.Status = 1
+	entity := map[string]string{"title": "Test Post 1", "content": "not enought data"}
 
 	recorded := erat.RunRequest(
 		t,
 		handler,
 		erat.MakeSimpleRequest("POST", fmt.Sprintf("%s/api/post", server.URL), entity))
 
-	t.Skipf("Invalid POST should return 400 but it is returning %s", recorded.Recorder.Code)
+	t.Skipf("Invalid POST should return 400 but it is returning %d", recorded.Recorder.Code)
 }
 
 func TestPOSTWithExistingEntryShouldReturn409(t *testing.T) {
@@ -174,7 +170,7 @@ func TestPOSTWithExistingEntryShouldReturn409(t *testing.T) {
 		handler,
 		erat.MakeSimpleRequest("POST", fmt.Sprintf("%s/api/post", server.URL), entity))
 
-	t.Skipf("Invalid code, should be 409 as a conflict for the ID 1 but get %s", recorded.Recorder.Code)
+	t.Skipf("Invalid code, should be 409 as a conflict for the ID 1 but get %d", recorded.Recorder.Code)
 }
 
 func TestPOSTWithValidEntityShouldReturn201WithHeader(t *testing.T) {
@@ -196,16 +192,37 @@ func TestPOSTWithValidEntityShouldReturn201WithHeader(t *testing.T) {
 	recorded.HeaderIs("Location", fmt.Sprintf("post/%d", entity.Id))
 }
 
+/**
+ * right now the PUT request return 200 even if you send problematic JSONs
+ * to beign inserted, which means a false-positive, but not dangerous mistakes
+ * it is just a matter of make the API more understandable and easy to debug
+ */
 func TestPUTWithInvalidEntityShouldReturn400(t *testing.T) {
-
+	t.Skip("PUT request should make validations, not allow fake 200")
 }
 
-func TestPUTWithInvalidEntityShouldReturn201(t *testing.T) {
+func TestPUTWithNoEntityChangeShouldReturn204(t *testing.T) {
 
+	entity := map[string]string{"title_wrong": "Test Post 1"}
+
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("PUT", fmt.Sprintf("%s/api/post/%d", server.URL, 10), entity))
+
+	recorded.CodeIs(204)
 }
 
 func TestDELETEShouldReturn404IfEntityNotFound(t *testing.T) {
 
+	entity := map[string]string{"title": "Test Post 1.1"}
+
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("PUT", fmt.Sprintf("%s/api/post/%d", server.URL, 999), entity))
+
+	recorded.CodeIs(404)
 }
 
 func TestDELETEShouldReturn200IfEntityExists(t *testing.T) {

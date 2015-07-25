@@ -163,7 +163,7 @@ func (em *EntityDbManager) PostEntity(entity string, postData map[string]interfa
 	return newId, nil
 }
 
-func (em *EntityDbManager) UpdateEntity(entity string, id string, updateData map[string]string) (int64, map[string]interface{}, error) {
+func (em *EntityDbManager) UpdateEntity(entity string, id string, updateData map[string]interface{}) (int64, map[string]interface{}, error) {
 
 	entityToUpdate, err := em.retrieveSingleResultById(entity, id)
 
@@ -173,31 +173,24 @@ func (em *EntityDbManager) UpdateEntity(entity string, id string, updateData map
 		return 0, entityToUpdate, nil
 	}
 
+	var updateSet []string
 	for updKey, _ := range entityToUpdate {
 		_, ok := updateData[updKey]
 
 		if ok {
-			entityToUpdate[updKey] = updateData[updKey]
+			entityToUpdate[updKey] = em.convertJsonValue(updateData[updKey])
+			updateSet = append(updateSet, fmt.Sprintf("`%s` = '%s'", updKey, entityToUpdate[updKey]))
 		}
 	}
 
-	var updateString string
-	propertyCount := 0
-
-	for entityKey, entityVal := range entityToUpdate {
-
-		if propertyCount == 0 {
-			updateString = fmt.Sprintf("`%s` = '%s'", entityKey, entityVal)
-		} else {
-			updateString = fmt.Sprintf("%s, `%s` = '%s'", updateString, entityKey, entityVal)
-		}
-		propertyCount++
+	if len(updateSet) <= 0 {
+		return 0, entityToUpdate, nil
 	}
 
 	updQuery := fmt.Sprintf(
 		"UPDATE `%s` SET %s WHERE id = %s",
 		entity,
-		updateString,
+		strings.Join(updateSet, ", "),
 		id,
 	)
 
