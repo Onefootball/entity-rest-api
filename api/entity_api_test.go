@@ -27,6 +27,15 @@ type User struct {
 	Email    string
 }
 
+type Post struct {
+	Id          int
+	Title       string
+	Content     string
+	Create_Time int
+	Author_Id   int
+	Status      int
+}
+
 func init() {
 
 	db, err := sql.Open("sqlite3", ":memory:")
@@ -135,11 +144,11 @@ func TestGETEntityThatExistsReturn200WithJson(t *testing.T) {
 func TestPOSTWithInvalidEntityShouldReturn400(t *testing.T) {
 
 	// This post doesn't have title and should be wrong then
-	entity := map[string]string{
-		"content":     "<p>Onefootball test post content...</p>",
-		"create_time": "1437839411",
-		"author_id":   "1",
-		"status":      "1"}
+	entity := new(Post)
+	entity.Content = "<p>Onefootball test post content...</p>"
+	entity.Create_Time = 1437839411
+	entity.Author_Id = 1
+	entity.Status = 1
 
 	recorded := erat.RunRequest(
 		t,
@@ -151,14 +160,14 @@ func TestPOSTWithInvalidEntityShouldReturn400(t *testing.T) {
 
 func TestPOSTWithExistingEntryShouldReturn409(t *testing.T) {
 
-	// This post doesn't have title and should be wrong then
-	entity := map[string]string{
-		"id":          "1",
-		"title":       "Test Post 1",
-		"content":     "<p>Onefootball test post content...</p>",
-		"create_time": "1437839411",
-		"author_id":   "1",
-		"status":      "1"}
+	// This post has a ID 1 that conflicts with the on in the database
+	entity := new(Post)
+	entity.Id = 1
+	entity.Title = "Test Post 1"
+	entity.Content = "<p>Onefootball test post content...</p>"
+	entity.Create_Time = 1437839411
+	entity.Author_Id = 1
+	entity.Status = 1
 
 	recorded := erat.RunRequest(
 		t,
@@ -170,6 +179,21 @@ func TestPOSTWithExistingEntryShouldReturn409(t *testing.T) {
 
 func TestPOSTWithValidEntityShouldReturn201WithHeader(t *testing.T) {
 
+	entity := new(Post)
+	entity.Id = 10
+	entity.Title = "Test Post 1"
+	entity.Content = "<p>Onefootball test post content...</p>"
+	entity.Create_Time = 1437839411
+	entity.Author_Id = 1
+	entity.Status = 1
+
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("POST", fmt.Sprintf("%s/api/post", server.URL), entity))
+
+	recorded.CodeIs(201)
+	recorded.HeaderIs("Location", fmt.Sprintf("%s/api/post/%d", server.URL, entity.Id))
 }
 
 func TestPUTWithInvalidEntityShouldReturn400(t *testing.T) {
