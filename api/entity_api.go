@@ -110,6 +110,8 @@ func (api *EntityRestAPI) PostEntity(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
+	w.Header().Set("Location", fmt.Sprintf("%s/%d", entity, insertedEntity["id"]))
+	w.WriteHeader(http.StatusCreated)
 	w.WriteJson(insertedEntity)
 }
 
