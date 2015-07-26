@@ -8,6 +8,11 @@ import (
 	"strconv"
 )
 
+const ID_COLUMN string = "id" //TODO: this can be dynamic and should
+const OFFSET string = "0"
+const LIMIT string = "10"
+const ORDER_DIR string = "ASC"
+
 type EntityRestAPI struct {
 	em *eram.EntityDbManager
 }
@@ -39,19 +44,19 @@ func (api *EntityRestAPI) GetAllEntities(w rest.ResponseWriter, r *rest.Request)
 	}
 
 	if offset == "" {
-		offset = "0"
+		offset = OFFSET
 	}
 
 	if limit == "" {
-		limit = "10"
+		limit = LIMIT
 	}
 
 	if orderBy == "" {
-		orderBy = "id"
+		orderBy = ID_COLUMN
 	}
 
 	if orderDir == "" {
-		orderDir = "ASC"
+		orderDir = ORDER_DIR
 	}
 
 	allResults, count, dbErr := api.em.GetEntities(entity, filterParams, limit, offset, orderBy, orderDir)
@@ -110,7 +115,8 @@ func (api *EntityRestAPI) PostEntity(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
-	w.Header().Set("Location", fmt.Sprintf("%s/%d", entity, insertedEntity["id"]))
+	w.Header().Set("Location", fmt.Sprintf("%s/%d", entity, insertedEntity[ID_COLUMN]))
+
 	w.WriteHeader(http.StatusCreated)
 	w.WriteJson(insertedEntity)
 }
