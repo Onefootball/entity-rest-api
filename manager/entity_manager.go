@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const ID_COLUMN string = "id" //TODO: this can be dynamic and should
+
 type EntityDbManager struct {
 	Db *sql.DB
 }
@@ -53,7 +55,8 @@ func (em *EntityDbManager) GetEntities(entity string, filterParams map[string]st
 	var countResult string
 
 	countQuery := fmt.Sprintf(
-		"SELECT count(id) FROM `%s`%s",
+		"SELECT count(%s) FROM `%s`%s",
+		ID_COLUMN,
 		entity,
 		whereClause,
 	)
@@ -104,8 +107,7 @@ func (em *EntityDbManager) PostEntity(entity string, postData map[string]interfa
 		for _, columnsRow := range columnsResult {
 
 			column := columnsRow["Field"].(string)
-
-			if column == "id" {
+			if column == ID_COLUMN {
 				continue
 			}
 
@@ -165,9 +167,10 @@ func (em *EntityDbManager) UpdateEntity(entity string, id string, updateData map
 	}
 
 	updQuery := fmt.Sprintf(
-		"UPDATE `%s` SET %s WHERE id = %s",
+		"UPDATE `%s` SET %s WHERE %s = %s",
 		entity,
 		strings.Join(updateSet, ", "),
+		ID_COLUMN,
 		id,
 	)
 
@@ -189,8 +192,9 @@ func (em *EntityDbManager) UpdateEntity(entity string, id string, updateData map
 func (em *EntityDbManager) DeleteEntity(entity string, id string) (int64, error) {
 
 	query := fmt.Sprintf(
-		"DELETE FROM `%s` WHERE id = %s",
+		"DELETE FROM `%s` WHERE %s = %s",
 		entity,
+		ID_COLUMN,
 		id,
 	)
 
@@ -263,8 +267,9 @@ func (em *EntityDbManager) retrieveSingleResultById(entity string, id string) (m
 	result := make(map[string]interface{})
 
 	query := fmt.Sprintf(
-		"SELECT * FROM `%s` WHERE id = %s",
+		"SELECT * FROM `%s` WHERE %s = %s",
 		entity,
+		ID_COLUMN,
 		id,
 	)
 
