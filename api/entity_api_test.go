@@ -313,3 +313,29 @@ func TestGETWithPaginationQueryStringsShouldReturn200WithLimit(t *testing.T) {
 		}
 	}
 }
+
+func TestGETWithColumnNameAsQueryStringShouldReturn200WithSet(t *testing.T) {
+
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/tag?name=test", server.URL), nil))
+
+	recorded.CodeIs(200)
+
+	data := []Tag{}
+	err := recorded.DecodeJsonPayload(&data)
+
+	if err != nil {
+		t.Error(err)
+	} else {
+
+		if len(data) <= 0 {
+			t.Error("Should have found at least 1 tags.")
+		}
+
+		if data[0].Name != "test" {
+			t.Error("The request should have filter the name by test.")
+		}
+	}
+}

@@ -90,12 +90,9 @@ This will search by `test` in the column `name` of the entity table.
 Tests
 -----
 
-To run the tests you must install the test dependency:
+To run the tests that right now cover mostly the `api` features do:
 
-	go get github.com/DATA-DOG/go-sqlmock
-
-And then a normal:
-
+	cd api
 	go test
 
 License
