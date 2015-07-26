@@ -339,3 +339,25 @@ func TestGETWithColumnNameAsQueryStringShouldReturn200WithSet(t *testing.T) {
 		}
 	}
 }
+
+func TestGETWithMultipleColumnFiltersShouldReturn200WithSet(t *testing.T) {
+
+	recorded := erat.RunRequest(
+		t,
+		handler,
+		erat.MakeSimpleRequest("GET", fmt.Sprintf("%s/api/lookup?name=%s&type=PostStatus", server.URL, "%25ed%25"), nil))
+
+	recorded.CodeIs(200)
+
+	data := []Tag{}
+	err := recorded.DecodeJsonPayload(&data)
+
+	if err != nil {
+		t.Error(err)
+	} else {
+
+		if len(data) < 2 {
+			t.Errorf("Should have found at least 2 tags. %v", data)
+		}
+	}
+}

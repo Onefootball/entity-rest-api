@@ -20,31 +20,22 @@ func NewEntityDbManager(db *sql.DB) *EntityDbManager {
 
 func (em *EntityDbManager) GetEntities(entity string, filterParams map[string]string, limit string, offset string, orderBy string, orderDir string) ([]map[string]interface{}, int, error) {
 
-	var whereClause string
-
+	var whereClause string = ""
 	if len(filterParams) > 0 {
-		whereClause = " WHERE "
-		paramCount := 0
 
+		var whereConditions []string
 		r := strings.NewReplacer("*", "%")
 
 		for filterParamKey, filterParamVal := range filterParams {
-
-			filterParamVal = r.Replace(filterParamVal)
-
-			if paramCount == 0 {
-				whereClause = fmt.Sprintf("%s `%s` LIKE '%s'", whereClause, filterParamKey, filterParamVal)
-			} else {
-				whereClause = fmt.Sprintf("%s AND `%s` LIKE '%s'", whereClause, filterParamKey, filterParamVal)
-			}
-			paramCount++
+			wherePiece := fmt.Sprintf("`%s` LIKE '%s'", filterParamKey, r.Replace(filterParamVal))
+			whereConditions = append(whereConditions, wherePiece)
 		}
-	} else {
-		whereClause = ""
+
+		whereClause = fmt.Sprintf("WHERE %s", strings.Join(whereConditions, " AND "))
 	}
 
 	query := fmt.Sprintf(
-		"SELECT * FROM `%s`%s ORDER BY %s %s LIMIT %s, %s",
+		"SELECT * FROM `%s` %s ORDER BY %s %s LIMIT %s, %s",
 		entity,
 		whereClause,
 		orderBy,
