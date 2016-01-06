@@ -1,13 +1,14 @@
 package manager
 
 import (
+	"database/sql"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
-	"errors"
-	"strconv"
-	"database/sql"
 )
+
+const ID_COLUMN string = "id" //TODO: this can be dynamic and should
 
 type EntityDbManager struct {
 	Db *sql.DB
@@ -21,31 +22,22 @@ func NewEntityDbManager(db *sql.DB) *EntityDbManager {
 
 func (em *EntityDbManager) GetEntities(entity string, filterParams map[string]string, limit string, offset string, orderBy string, orderDir string) ([]map[string]interface{}, int, error) {
 
-	var whereClause string
+	var whereClause string = ""
+	if len(filterParams) > 0 {
 
-	if (len(filterParams) > 0) {
-		whereClause = " WHERE "
-		paramCount := 0
-
+		var whereConditions []string
 		r := strings.NewReplacer("*", "%")
 
 		for filterParamKey, filterParamVal := range filterParams {
-
-			filterParamVal = r.Replace(filterParamVal)
-
-			if paramCount == 0 {
-				whereClause = fmt.Sprintf("%s `%s` LIKE '%s'", whereClause, filterParamKey, filterParamVal)
-			} else {
-				whereClause = fmt.Sprintf("%s AND `%s` LIKE '%s'", whereClause, filterParamKey, filterParamVal)
-			}
-			paramCount++
+			wherePiece := fmt.Sprintf("`%s` LIKE '%s'", filterParamKey, r.Replace(filterParamVal))
+			whereConditions = append(whereConditions, wherePiece)
 		}
-	} else {
-		whereClause = ""
+
+		whereClause = fmt.Sprintf("WHERE %s", strings.Join(whereConditions, " AND "))
 	}
 
 	query := fmt.Sprintf(
-		"SELECT * FROM `%s`%s ORDER BY %s %s LIMIT %s, %s",
+		"SELECT * FROM `%s` %s ORDER BY %s %s LIMIT %s, %s",
 		entity,
 		whereClause,
 		orderBy,
@@ -63,7 +55,8 @@ func (em *EntityDbManager) GetEntities(entity string, filterParams map[string]st
 	var countResult string
 
 	countQuery := fmt.Sprintf(
-		"SELECT count(id) FROM `%s`%s",
+		"SELECT count(%s) FROM `%s`%s",
+		ID_COLUMN,
 		entity,
 		whereClause,
 	)
@@ -97,55 +90,41 @@ func (em *EntityDbManager) PostEntity(entity string, postData map[string]interfa
 		entity,
 	)
 
-	newEntity := make(map[string]string)
+	var columns []string
+	var values []string
 
 	columnsResult, err := em.retrieveAllResultsByQuery(columnsQuery)
 
-	// if there is an error in SHOW COLUMNS (like for sqlite databases) all NOT NULL table fields must be in post data
+	// if there is an error in SHOW COLUMNS all fields are required
 	if err != nil {
+
 		for postDataKey, postDataVal := range postData {
-			newEntity[postDataKey] = em.convertJsonValue(postDataVal)
+			columns = append(columns, fmt.Sprintf("`%s`", postDataKey))
+			values = append(values, fmt.Sprintf("'%s'", em.convertJsonValue(postDataVal)))
 		}
+
 	} else {
 		for _, columnsRow := range columnsResult {
-			column := columnsRow["Field"].(string)
 
-			if column == "id" {
+			column := columnsRow["Field"].(string)
+			if column == ID_COLUMN {
 				continue
 			}
 
 			_, ok := postData[column]
 
 			if ok {
-				newEntity[column] = em.convertJsonValue(postData[column])
-			} else {
-				newEntity[column] = ""
+				columns = append(columns, fmt.Sprintf("`%s`", column))
+				values = append(values, fmt.Sprintf("'%s'", em.convertJsonValue(postData[column])))
 			}
 		}
-	}
-
-	var insertColumnsString string
-	var insertValuesString string
-
-	propertyCount := 0
-
-	for entityKey, entityVal := range newEntity {
-
-		if propertyCount == 0 {
-			insertColumnsString = fmt.Sprintf("`%s`", entityKey)
-			insertValuesString = fmt.Sprintf("'%s'", entityVal)
-		} else {
-			insertColumnsString = fmt.Sprintf("%s, `%s`", insertColumnsString, entityKey)
-			insertValuesString = fmt.Sprintf("%s, '%s'", insertValuesString, entityVal)
-		}
-		propertyCount++
 	}
 
 	insertQuery := fmt.Sprintf(
 		"INSERT INTO `%s` (%s) VALUES(%s)",
 		entity,
-		insertColumnsString,
-		insertValuesString,
+		strings.Join(columns, ", "),
+		strings.Join(values, ", "),
 	)
 
 	res, err := em.Db.Exec(insertQuery)
@@ -163,39 +142,35 @@ func (em *EntityDbManager) PostEntity(entity string, postData map[string]interfa
 	return newId, nil
 }
 
-func (em *EntityDbManager) UpdateEntity(entity string, id string, updateData map[string]string) (int64, map[string]interface{}, error) {
+func (em *EntityDbManager) UpdateEntity(entity string, id string, updateData map[string]interface{}) (int64, map[string]interface{}, error) {
 
 	entityToUpdate, err := em.retrieveSingleResultById(entity, id)
 
 	if err != nil {
 		return 0, make(map[string]interface{}), err
+	} else if len(entityToUpdate) <= 0 {
+		return 0, entityToUpdate, nil
 	}
 
+	var updateSet []string
 	for updKey, _ := range entityToUpdate {
 		_, ok := updateData[updKey]
 
 		if ok {
-			entityToUpdate[updKey] = updateData[updKey]
+			entityToUpdate[updKey] = em.convertJsonValue(updateData[updKey])
+			updateSet = append(updateSet, fmt.Sprintf("`%s` = '%s'", updKey, entityToUpdate[updKey]))
 		}
 	}
 
-	var updateString string
-	propertyCount := 0
-
-	for entityKey, entityVal := range entityToUpdate {
-
-		if propertyCount == 0 {
-			updateString = fmt.Sprintf("`%s` = '%s'", entityKey, entityVal)
-		} else {
-			updateString = fmt.Sprintf("%s, `%s` = '%s'", updateString, entityKey, entityVal)
-		}
-		propertyCount++
+	if len(updateSet) <= 0 {
+		return 0, entityToUpdate, nil
 	}
 
 	updQuery := fmt.Sprintf(
-		"UPDATE `%s` SET %s WHERE id = %s",
+		"UPDATE `%s` SET %s WHERE %s = %s",
 		entity,
-		updateString,
+		strings.Join(updateSet, ", "),
+		ID_COLUMN,
 		id,
 	)
 
@@ -217,8 +192,9 @@ func (em *EntityDbManager) UpdateEntity(entity string, id string, updateData map
 func (em *EntityDbManager) DeleteEntity(entity string, id string) (int64, error) {
 
 	query := fmt.Sprintf(
-		"DELETE FROM `%s` WHERE id = %s",
+		"DELETE FROM `%s` WHERE %s = %s",
 		entity,
+		ID_COLUMN,
 		id,
 	)
 
@@ -291,8 +267,9 @@ func (em *EntityDbManager) retrieveSingleResultById(entity string, id string) (m
 	result := make(map[string]interface{})
 
 	query := fmt.Sprintf(
-		"SELECT * FROM `%s` WHERE id = %s",
+		"SELECT * FROM `%s` WHERE %s = %s",
 		entity,
+		ID_COLUMN,
 		id,
 	)
 
@@ -342,32 +319,28 @@ func (em *EntityDbManager) retrieveSingleResultById(entity string, id string) (m
 		}
 	}
 
-	if resultCount != 1 {
-		return result, errors.New("Id query returned inappropriate result")
-	}
-
 	return result, nil
 }
 
 func (em *EntityDbManager) convertDbValue(dbValue interface{}) interface{} {
 
 	switch t := dbValue.(type) {
-		default:
+	default:
 		fmt.Printf("[EntityDbManager] Unexpected db type %T: %#v\n", t, dbValue)
 		return ""
-		case bool:
+	case bool:
 		return dbValue.(bool)
-		case int:
+	case int:
 		return dbValue.(int)
-		case int64:
+	case int64:
 		return dbValue.(int64)
-		case []byte:
+	case []byte:
 		return string(dbValue.([]byte))
-		case string:
+	case string:
 		return dbValue.(string)
-		case time.Time:
+	case time.Time:
 		return dbValue.(time.Time).String()
-		case nil:
+	case nil:
 		return nil
 	}
 }
@@ -375,20 +348,20 @@ func (em *EntityDbManager) convertDbValue(dbValue interface{}) interface{} {
 func (em *EntityDbManager) convertJsonValue(jsonValue interface{}) string {
 
 	switch t := jsonValue.(type) {
-		default:
+	default:
 		fmt.Printf("[EntityDbManager] Unexpected json type %T: %#v\n", t, jsonValue)
 		return ""
-		case bool:
+	case bool:
 		return strconv.Itoa(em.Btoi(jsonValue.(bool)))
-		case int:
+	case int:
 		return strconv.Itoa(jsonValue.(int))
-		case int64:
+	case int64:
 		return strconv.FormatInt(jsonValue.(int64), 10)
-		case float64:
+	case float64:
 		return strconv.Itoa(int(jsonValue.(float64)))
-		case string:
+	case string:
 		return jsonValue.(string)
-		case nil:
+	case nil:
 		return "NULL"
 	}
 }
@@ -399,4 +372,3 @@ func (em *EntityDbManager) Btoi(b bool) int {
 	}
 	return 0
 }
-

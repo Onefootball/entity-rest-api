@@ -1,12 +1,17 @@
 package api
 
 import (
+	"fmt"
+	eram "github.com/Onefootball/entity-rest-api/manager"
 	"github.com/ant0ine/go-json-rest/rest"
 	"net/http"
-	"fmt"
 	"strconv"
-	eram "github.com/Onefootball/entity-rest-api/manager"
 )
+
+const ID_COLUMN string = "id" //TODO: this can be dynamic and should
+const OFFSET string = "0"
+const LIMIT string = "10"
+const ORDER_DIR string = "ASC"
 
 type EntityRestAPI struct {
 	em *eram.EntityDbManager
@@ -39,19 +44,19 @@ func (api *EntityRestAPI) GetAllEntities(w rest.ResponseWriter, r *rest.Request)
 	}
 
 	if offset == "" {
-		offset = "0"
+		offset = OFFSET
 	}
 
 	if limit == "" {
-		limit = "10"
+		limit = LIMIT
 	}
 
 	if orderBy == "" {
-		orderBy = "id"
+		orderBy = ID_COLUMN
 	}
 
 	if orderDir == "" {
-		orderDir = "ASC"
+		orderDir = ORDER_DIR
 	}
 
 	allResults, count, dbErr := api.em.GetEntities(entity, filterParams, limit, offset, orderBy, orderDir)
@@ -76,6 +81,9 @@ func (api *EntityRestAPI) GetEntity(w rest.ResponseWriter, r *rest.Request) {
 
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	} else if len(result) <= 0 {
+		rest.Error(w, "Not Found", http.StatusNotFound)
 		return
 	}
 
@@ -107,6 +115,9 @@ func (api *EntityRestAPI) PostEntity(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
+	w.Header().Set("Location", fmt.Sprintf("%s/%d", entity, insertedEntity[ID_COLUMN]))
+
+	w.WriteHeader(http.StatusCreated)
 	w.WriteJson(insertedEntity)
 }
 
@@ -115,7 +126,7 @@ func (api *EntityRestAPI) PutEntity(w rest.ResponseWriter, r *rest.Request) {
 	id := r.PathParam("id")
 	entity := r.PathParam("entity")
 
-	updated := map[string]string{}
+	updated := map[string]interface{}{}
 
 	if err := r.DecodeJsonPayload(&updated); err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
@@ -127,10 +138,13 @@ func (api *EntityRestAPI) PutEntity(w rest.ResponseWriter, r *rest.Request) {
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	} else if len(updatedEntity) <= 0 {
+		rest.Error(w, "Not Found", http.StatusNotFound)
+		return
 	}
 
 	if rowsAffected == 0 {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusNoContent)
 	} else {
 		w.WriteHeader(http.StatusOK)
 	}
