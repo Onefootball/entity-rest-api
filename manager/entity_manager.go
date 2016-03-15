@@ -8,23 +8,34 @@ import (
 	"time"
 )
 
-const ID_COLUMN string = "id" //TODO: this can be dynamic and should
+const DefaultIdColumn = "id"
 
 type EntityDbManager struct {
-	Db *sql.DB
+	Db        *sql.DB
+	EntityMap map[string]string
 }
 
 func NewEntityDbManager(db *sql.DB) *EntityDbManager {
+	return NewEntityDbManagerWithEntityMap(db, map[string]string{})
+}
+
+func NewEntityDbManagerWithEntityMap(db *sql.DB, entityMap map[string]string) *EntityDbManager {
 	return &EntityDbManager{
 		db,
+		entityMap,
 	}
 }
 
-func (em *EntityDbManager) GetEntities(entity string, filterParams map[string]string, limit string, offset string, orderBy string, orderDir string) ([]map[string]interface{}, int, error) {
+func (em *EntityDbManager) GetIdColumn(entity string) string {
+	if v, ok := em.EntityMap[entity]; ok {
+		return v
+	}
+	return DefaultIdColumn
+}
 
+func (em *EntityDbManager) GetEntities(entity string, filterParams map[string]string, limit string, offset string, orderBy string, orderDir string) ([]map[string]interface{}, int, error) {
 	var whereClause string = ""
 	if len(filterParams) > 0 {
-
 		var whereConditions []string
 		r := strings.NewReplacer("*", "%")
 
@@ -47,22 +58,19 @@ func (em *EntityDbManager) GetEntities(entity string, filterParams map[string]st
 	)
 
 	allResults, err := em.retrieveAllResultsByQuery(query)
-
 	if err != nil {
 		return make([]map[string]interface{}, 0), 0, err
 	}
 
 	var countResult string
-
 	countQuery := fmt.Sprintf(
 		"SELECT count(%s) FROM `%s`%s",
-		ID_COLUMN,
+		em.GetIdColumn(entity),
 		entity,
 		whereClause,
 	)
 
 	countErr := em.Db.QueryRow(countQuery).Scan(&countResult)
-
 	if countErr != nil {
 		return make([]map[string]interface{}, 0), 0, countErr
 	}
@@ -73,9 +81,7 @@ func (em *EntityDbManager) GetEntities(entity string, filterParams map[string]st
 }
 
 func (em *EntityDbManager) GetEntity(entity string, id string) (map[string]interface{}, error) {
-
 	result, err := em.retrieveSingleResultById(entity, id)
-
 	if err != nil {
 		return make(map[string]interface{}), err
 	}
@@ -84,7 +90,6 @@ func (em *EntityDbManager) GetEntity(entity string, id string) (map[string]inter
 }
 
 func (em *EntityDbManager) PostEntity(entity string, postData map[string]interface{}) (int64, error) {
-
 	columnsQuery := fmt.Sprintf(
 		"SHOW COLUMNS FROM `%s`",
 		entity,
@@ -97,22 +102,18 @@ func (em *EntityDbManager) PostEntity(entity string, postData map[string]interfa
 
 	// if there is an error in SHOW COLUMNS all fields are required
 	if err != nil {
-
 		for postDataKey, postDataVal := range postData {
 			columns = append(columns, fmt.Sprintf("`%s`", postDataKey))
 			values = append(values, fmt.Sprintf("'%s'", em.convertJsonValue(postDataVal)))
 		}
-
 	} else {
 		for _, columnsRow := range columnsResult {
-
 			column := columnsRow["Field"].(string)
-			if column == ID_COLUMN {
+			if column == em.GetIdColumn(entity) {
 				continue
 			}
 
 			_, ok := postData[column]
-
 			if ok {
 				columns = append(columns, fmt.Sprintf("`%s`", column))
 				values = append(values, fmt.Sprintf("'%s'", em.convertJsonValue(postData[column])))
@@ -128,13 +129,11 @@ func (em *EntityDbManager) PostEntity(entity string, postData map[string]interfa
 	)
 
 	res, err := em.Db.Exec(insertQuery)
-
 	if err != nil {
 		return 0, err
 	}
 
 	newId, err := res.LastInsertId()
-
 	if err != nil {
 		return 0, err
 	}
@@ -143,9 +142,7 @@ func (em *EntityDbManager) PostEntity(entity string, postData map[string]interfa
 }
 
 func (em *EntityDbManager) UpdateEntity(entity string, id string, updateData map[string]interface{}) (int64, map[string]interface{}, error) {
-
 	entityToUpdate, err := em.retrieveSingleResultById(entity, id)
-
 	if err != nil {
 		return 0, make(map[string]interface{}), err
 	} else if len(entityToUpdate) <= 0 {
@@ -170,18 +167,16 @@ func (em *EntityDbManager) UpdateEntity(entity string, id string, updateData map
 		"UPDATE `%s` SET %s WHERE %s = %s",
 		entity,
 		strings.Join(updateSet, ", "),
-		ID_COLUMN,
+		em.GetIdColumn(entity),
 		id,
 	)
 
 	res, err := em.Db.Exec(updQuery)
-
 	if err != nil {
 		return 0, make(map[string]interface{}), err
 	}
 
 	rowsAffected, err := res.RowsAffected()
-
 	if err != nil {
 		return 0, make(map[string]interface{}), err
 	}
@@ -190,22 +185,19 @@ func (em *EntityDbManager) UpdateEntity(entity string, id string, updateData map
 }
 
 func (em *EntityDbManager) DeleteEntity(entity string, id string) (int64, error) {
-
 	query := fmt.Sprintf(
 		"DELETE FROM `%s` WHERE %s = %s",
 		entity,
-		ID_COLUMN,
+		em.GetIdColumn(entity),
 		id,
 	)
 
 	res, err := em.Db.Exec(query)
-
 	if err != nil {
 		return 0, err
 	}
 
 	rowsAffected, err := res.RowsAffected()
-
 	if err != nil {
 		return 0, err
 	}
@@ -214,11 +206,8 @@ func (em *EntityDbManager) DeleteEntity(entity string, id string) (int64, error)
 }
 
 func (em *EntityDbManager) retrieveAllResultsByQuery(query string) ([]map[string]interface{}, error) {
-
 	allResults := make([]map[string]interface{}, 0)
-
 	rows, err := em.Db.Query(query)
-
 	if err != nil {
 		return allResults, err
 	}
@@ -230,24 +219,19 @@ func (em *EntityDbManager) retrieveAllResultsByQuery(query string) ([]map[string
 	}()
 
 	cols, err := rows.Columns()
-
 	if err != nil {
 		return allResults, err
 	}
 
 	rawResult := make([]interface{}, len(cols))
-
 	dest := make([]interface{}, len(cols)) // A temporary interface{} slice
-
 	for i, _ := range rawResult {
 		dest[i] = &rawResult[i] // Put pointers to each string in the interface slice
 	}
 
 	for rows.Next() {
 		result := make(map[string]interface{})
-
 		err = rows.Scan(dest...)
-
 		if err != nil {
 			return allResults, err
 		}
@@ -263,18 +247,15 @@ func (em *EntityDbManager) retrieveAllResultsByQuery(query string) ([]map[string
 }
 
 func (em *EntityDbManager) retrieveSingleResultById(entity string, id string) (map[string]interface{}, error) {
-
 	result := make(map[string]interface{})
-
 	query := fmt.Sprintf(
 		"SELECT * FROM `%s` WHERE %s = %s",
 		entity,
-		ID_COLUMN,
+		em.GetIdColumn(entity),
 		id,
 	)
 
 	rows, err := em.Db.Query(query)
-
 	if err != nil {
 		return result, err
 	}
@@ -286,26 +267,20 @@ func (em *EntityDbManager) retrieveSingleResultById(entity string, id string) (m
 	}()
 
 	cols, err := rows.Columns()
-
 	if err != nil {
 		return result, err
 	}
 
 	rawResult := make([]interface{}, len(cols))
-
 	dest := make([]interface{}, len(cols)) // A temporary interface{} slice
-
 	for i, _ := range rawResult {
 		dest[i] = &rawResult[i] // Put pointers to each string in the interface slice
 	}
 
 	resultCount := 0
-
 	for rows.Next() {
-
 		resultCount++
 		err = rows.Scan(dest...)
-
 		if err != nil {
 			return result, err
 		}
@@ -323,7 +298,6 @@ func (em *EntityDbManager) retrieveSingleResultById(entity string, id string) (m
 }
 
 func (em *EntityDbManager) convertDbValue(dbValue interface{}) interface{} {
-
 	switch t := dbValue.(type) {
 	default:
 		fmt.Printf("[EntityDbManager] Unexpected db type %T: %#v\n", t, dbValue)
@@ -346,7 +320,6 @@ func (em *EntityDbManager) convertDbValue(dbValue interface{}) interface{} {
 }
 
 func (em *EntityDbManager) convertJsonValue(jsonValue interface{}) string {
-
 	switch t := jsonValue.(type) {
 	default:
 		fmt.Printf("[EntityDbManager] Unexpected json type %T: %#v\n", t, jsonValue)
