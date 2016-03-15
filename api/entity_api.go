@@ -2,30 +2,28 @@ package api
 
 import (
 	"fmt"
-	eram "github.com/Onefootball/entity-rest-api/manager"
-	"github.com/ant0ine/go-json-rest/rest"
 	"net/http"
 	"strconv"
+
+	eram "github.com/Onefootball/entity-rest-api/manager"
+	"github.com/ant0ine/go-json-rest/rest"
 )
 
-const ID_COLUMN string = "id" //TODO: this can be dynamic and should
-const OFFSET string = "0"
-const LIMIT string = "10"
-const ORDER_DIR string = "ASC"
+const Offset string = "0"
+const Limit string = "10"
+const OrderDir string = "ASC"
 
 type EntityRestAPI struct {
 	em *eram.EntityDbManager
 }
 
 func NewEntityRestAPI(em *eram.EntityDbManager) *EntityRestAPI {
-
 	return &EntityRestAPI{
 		em,
 	}
 }
 
 func (api *EntityRestAPI) GetAllEntities(w rest.ResponseWriter, r *rest.Request) {
-
 	entity := r.PathParam("entity")
 	qs := r.Request.URL.Query()
 
@@ -44,19 +42,19 @@ func (api *EntityRestAPI) GetAllEntities(w rest.ResponseWriter, r *rest.Request)
 	}
 
 	if offset == "" {
-		offset = OFFSET
+		offset = Offset
 	}
 
 	if limit == "" {
-		limit = LIMIT
+		limit = Limit
 	}
 
 	if orderBy == "" {
-		orderBy = ID_COLUMN
+		orderBy = api.em.GetIdColumn(entity)
 	}
 
 	if orderDir == "" {
-		orderDir = ORDER_DIR
+		orderDir = OrderDir
 	}
 
 	allResults, count, dbErr := api.em.GetEntities(entity, filterParams, limit, offset, orderBy, orderDir)
@@ -73,12 +71,9 @@ func (api *EntityRestAPI) GetAllEntities(w rest.ResponseWriter, r *rest.Request)
 }
 
 func (api *EntityRestAPI) GetEntity(w rest.ResponseWriter, r *rest.Request) {
-
 	id := r.PathParam("id")
 	entity := r.PathParam("entity")
-
 	result, err := api.em.GetEntity(entity, id)
-
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -91,50 +86,41 @@ func (api *EntityRestAPI) GetEntity(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (api *EntityRestAPI) PostEntity(w rest.ResponseWriter, r *rest.Request) {
-
 	entity := r.PathParam("entity")
-
 	postData := map[string]interface{}{}
-
 	if err := r.DecodeJsonPayload(&postData); err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	newId, err := api.em.PostEntity(entity, postData)
-
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	insertedEntity, err := api.em.GetEntity(entity, strconv.FormatInt(newId, 10))
-
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Location", fmt.Sprintf("%s/%d", entity, insertedEntity[ID_COLUMN]))
+	w.Header().Set("Location", fmt.Sprintf("%s/%d", entity, insertedEntity[api.em.GetIdColumn(entity)]))
 
 	w.WriteHeader(http.StatusCreated)
 	w.WriteJson(insertedEntity)
 }
 
 func (api *EntityRestAPI) PutEntity(w rest.ResponseWriter, r *rest.Request) {
-
 	id := r.PathParam("id")
 	entity := r.PathParam("entity")
-
 	updated := map[string]interface{}{}
-
 	if err := r.DecodeJsonPayload(&updated); err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	rowsAffected, updatedEntity, err := api.em.UpdateEntity(entity, id, updated)
-
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -153,12 +139,9 @@ func (api *EntityRestAPI) PutEntity(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (api *EntityRestAPI) DeleteEntity(w rest.ResponseWriter, r *rest.Request) {
-
 	id := r.PathParam("id")
 	entity := r.PathParam("entity")
-
 	rowsAffected, err := api.em.DeleteEntity(entity, id)
-
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
