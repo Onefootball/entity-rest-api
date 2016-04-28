@@ -104,7 +104,7 @@ func (em *EntityDbManager) PostEntity(entity string, postData map[string]interfa
 	if err != nil {
 		for postDataKey, postDataVal := range postData {
 			columns = append(columns, fmt.Sprintf("`%s`", postDataKey))
-			values = append(values, fmt.Sprintf("'%s'", em.convertJsonValue(postDataVal)))
+			values = append(values, em.convertJsonValue(postDataVal))
 		}
 	} else {
 		for _, columnsRow := range columnsResult {
@@ -116,7 +116,7 @@ func (em *EntityDbManager) PostEntity(entity string, postData map[string]interfa
 			_, ok := postData[column]
 			if ok {
 				columns = append(columns, fmt.Sprintf("`%s`", column))
-				values = append(values, fmt.Sprintf("'%s'", em.convertJsonValue(postData[column])))
+				values = append(values, em.convertJsonValue(postData[column]))
 			}
 		}
 	}
@@ -155,7 +155,7 @@ func (em *EntityDbManager) UpdateEntity(entity string, id string, updateData map
 
 		if ok {
 			entityToUpdate[updKey] = em.convertJsonValue(updateData[updKey])
-			updateSet = append(updateSet, fmt.Sprintf("`%s` = '%s'", updKey, entityToUpdate[updKey]))
+			updateSet = append(updateSet, fmt.Sprintf("`%s` = %s", updKey, entityToUpdate[updKey]))
 		}
 	}
 
@@ -333,7 +333,7 @@ func (em *EntityDbManager) convertJsonValue(jsonValue interface{}) string {
 	case float64:
 		return strconv.Itoa(int(jsonValue.(float64)))
 	case string:
-		return jsonValue.(string)
+		return fmt.Sprintf("'%s'", jsonValue.(string))
 	case nil:
 		return "NULL"
 	}
