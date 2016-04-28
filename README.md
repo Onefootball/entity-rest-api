@@ -1,6 +1,8 @@
 entity-rest-api
 ===============
 
+[![Build Status](https://travis-ci.org/Onefootball/entity-rest-api.svg?branch=feature%2Fadd-travis-file)](https://travis-ci.org/Onefootball/entity-rest-api)
+
 Description
 -----------
 
