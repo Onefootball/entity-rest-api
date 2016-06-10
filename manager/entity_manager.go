@@ -333,7 +333,7 @@ func (em *EntityDbManager) convertJsonValue(jsonValue interface{}) string {
 	case float64:
 		return strconv.Itoa(int(jsonValue.(float64)))
 	case string:
-		return fmt.Sprintf("'%s'", jsonValue.(string))
+		return fmt.Sprintf("'%s'", strings.Replace(jsonValue.(string), "'", "\\'", -1))
 	case nil:
 		return "NULL"
 	}
