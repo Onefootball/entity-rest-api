@@ -116,9 +116,9 @@ func (api *EntityRestAPI) PostEntity(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
-	w.Header().Set(LocationHeader, fmt.Sprintf("%s/%s", entity, insertedEntity[api.em.GetIdColumn(entity)]))
+	w.Header().Set(LocationHeader, fmt.Sprintf("%s/%d", entity, newId))
 	w.Header().Set(StatusCodeHeader, fmt.Sprintf("%d", http.StatusCreated))
-	w.Header().Set(EntityIDHeader, fmt.Sprintf("%s", insertedEntity[api.em.GetIdColumn(entity)]))
+	w.Header().Set(EntityIDHeader, fmt.Sprintf("%d", newId))
 
 	w.WriteHeader(http.StatusCreated)
 	w.WriteJson(insertedEntity)

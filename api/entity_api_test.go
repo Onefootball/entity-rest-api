@@ -194,7 +194,9 @@ func TestPOSTWithValidEntityShouldReturn201WithHeader(t *testing.T) {
 		erat.MakeSimpleRequest("POST", fmt.Sprintf("%s/api/post", server.URL), entity))
 
 	recorded.CodeIs(201)
-	recorded.HeaderIs("Location", fmt.Sprintf("post/%d", entity.Id))
+	recorded.HeaderIs(LocationHeader, fmt.Sprintf("post/%d", entity.Id))
+	recorded.HeaderIs(EntityIDHeader, fmt.Sprintf("%d", entity.Id))
+	recorded.HeaderIs(StatusCodeHeader, "201")
 }
 
 /**
