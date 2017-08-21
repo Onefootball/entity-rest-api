@@ -9,9 +9,14 @@ import (
 	"github.com/ant0ine/go-json-rest/rest"
 )
 
-const Offset string = "0"
-const Limit string = "10"
-const OrderDir string = "ASC"
+const (
+	Offset           = "0"
+	Limit            = "10"
+	OrderDir         = "ASC"
+	StatusCodeHeader = "X-Status-Code"
+	EntityIDHeader   = "X-Entity-ID"
+	LocationHeader   = "Location"
+)
 
 type EntityRestAPI struct {
 	em *eram.EntityDbManager
@@ -86,26 +91,34 @@ func (api *EntityRestAPI) GetEntity(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (api *EntityRestAPI) PostEntity(w rest.ResponseWriter, r *rest.Request) {
+	w.Header().Add("Access-Control-Expose-Headers", StatusCodeHeader)
+	w.Header().Add("Access-Control-Expose-Headers", EntityIDHeader)
+
 	entity := r.PathParam("entity")
 	postData := map[string]interface{}{}
 	if err := r.DecodeJsonPayload(&postData); err != nil {
+		w.Header().Set(StatusCodeHeader, fmt.Sprintf("%d", http.StatusInternalServerError))
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	newId, err := api.em.PostEntity(entity, postData)
 	if err != nil {
+		w.Header().Set(StatusCodeHeader, fmt.Sprintf("%d", http.StatusInternalServerError))
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	insertedEntity, err := api.em.GetEntity(entity, strconv.FormatInt(newId, 10))
 	if err != nil {
+		w.Header().Set(StatusCodeHeader, fmt.Sprintf("%d", http.StatusInternalServerError))
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Location", fmt.Sprintf("%s/%d", entity, insertedEntity[api.em.GetIdColumn(entity)]))
+	w.Header().Set(LocationHeader, fmt.Sprintf("%s/%s", entity, insertedEntity[api.em.GetIdColumn(entity)]))
+	w.Header().Set(StatusCodeHeader, fmt.Sprintf("%d", http.StatusCreated))
+	w.Header().Set(EntityIDHeader, fmt.Sprintf("%s", insertedEntity[api.em.GetIdColumn(entity)]))
 
 	w.WriteHeader(http.StatusCreated)
 	w.WriteJson(insertedEntity)
