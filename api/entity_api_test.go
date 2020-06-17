@@ -46,12 +46,12 @@ func init() {
 	db, err := sql.Open("sqlite3", ":memory:")
 
 	if err != nil {
-		log.Fatal("An error '%s' was not expected when opening a stub database connection", err)
+		log.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
 	} else {
 
 		dat, err := ioutil.ReadFile("./../test.sql")
 		if err != nil {
-			log.Fatal("An error '%s' was not expected when opening sql file", err)
+			log.Fatalf("An error '%s' was not expected when opening sql file", err)
 		} else {
 			db.Exec(string(dat))
 		}
@@ -72,7 +72,7 @@ func init() {
 	)
 
 	if err != nil {
-		log.Fatal("An error '%s' was not expected when creating the router", err)
+		log.Fatalf("An error '%s' was not expected when creating the router", err)
 	}
 
 	api.SetApp(router)

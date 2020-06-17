@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 
-	eram "github.com/Onefootball/entity-rest-api/manager"
 	"github.com/ant0ine/go-json-rest/rest"
 )
 
@@ -18,11 +17,20 @@ const (
 	LocationHeader   = "Location"
 )
 
-type EntityRestAPI struct {
-	em *eram.EntityDbManager
+type entityDbManager interface {
+	GetIdColumn(entity string) string
+	GetEntities(entity string, filterParams map[string]string, limit string, offset string, orderBy string, orderDir string) ([]map[string]interface{}, int, error)
+	GetEntity(entity string, id string) (map[string]interface{}, error)
+	PostEntity(entity string, postData map[string]interface{}) (int64, error)
+	UpdateEntity(entity string, id string, updateData map[string]interface{}) (int64, map[string]interface{}, error)
+	DeleteEntity(entity string, id string) (int64, error)
 }
 
-func NewEntityRestAPI(em *eram.EntityDbManager) *EntityRestAPI {
+type EntityRestAPI struct {
+	em entityDbManager
+}
+
+func NewEntityRestAPI(em entityDbManager) *EntityRestAPI {
 	return &EntityRestAPI{
 		em,
 	}
